@@ -479,7 +479,9 @@ function finishedCallback(resultsLines) {
     if (resultsLines != null && ! currentElement.hideResults) {
         for (var i = 0; i < resultsLines.length; ++i) {
             var group = currentElement.group;
-            if (group && group.length)
+
+            // HACK(jgauthier): Don't modify `group` when it's a string.
+            if (group && group.length && typeof group != "string")
                 group = group[0]
             var preamble = [ [0, currentElement.controller ? currentElement.controller : "UNKNOWN"],
                              [1, (currentElement.itemNumber || currentElement.itemNumber == 0) ? currentElement.itemNumber : "DYNAMIC"],
