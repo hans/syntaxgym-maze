@@ -1,0 +1,152 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library(tidyverse)
+library(urltools)
+```
+
+```{r}
+filename = "../results/results"
+data <- read_csv(filename, comment="#",
+                 col_names=c("time", "MD5", "controller", "item", "elem",
+                             "type", "group", "col_8", "col_9", "col_10",
+                             "col_11", "col_12", "col_13", "col_14", "col_15"),
+                 col_types=cols(time=col_integer(),
+                                MD5=col_character(),
+                                controller=col_character(),
+                                item=col_integer(),
+                                elem=col_integer(),
+                                type=col_character(),
+                                group=col_character(),
+                                col_8=col_character(),
+                                col_9=col_character(),
+                                col_10=col_character(),
+                                col_11=col_character(),
+                                col_12=col_character(),
+                                col_13=col_character(),
+                                col_14=col_character(),
+                                col_15=col_character())) %>%
+  mutate_at(vars(matches("col")), url_decode) # urldecode string data
+
+# split off non-maze, participant level stuff and process them
+other <- filter(data, type %in% c("questionnaire")) %>% 
+  select(time, MD5, col_8, col_9) %>% 
+  group_by(time, MD5) %>%
+  pivot_wider(names_from=col_8, values_from=col_9) %>%
+  type_convert()
+
+#take the Maze task results, relabel and type appropriately
+maze<- filter(data, controller=="Maze") %>% 
+  select(time, MD5, type, group, word_num=col_8, word=col_9, distractor=col_10, on_right=col_11, correct=col_12, rt=col_13, total_rt=col_15) %>% 
+  type_convert(col_types=cols(
+    time=col_integer(),
+    MD5=col_character(),
+    type=col_character(),
+    group=col_character(),
+    word_num=col_integer(),
+    word=col_character(),
+    distractor=col_character(),
+    on_right=col_logical(),
+    correct=col_character(),
+    rt=col_integer(),
+    sentence=col_character(),
+    total_rt=col_integer()
+  )) %>%
+  
+  mutate(correct=correct == "yes") %>%
+  
+  # Drop practice
+  filter(type != "practice") %>%
+  
+  # Prepare SG-interpretable columns
+  separate(group, c("suite", "item"), sep="-") %>%
+  type_convert(cols(item=col_integer())) %>%
+  rename(condition=type) 
+maze
+```
+
+## Prepare "surprisal" results
+
+Aggregate data across subjects, and prepare "surprisal" results for SyntaxGym evaluation.
+
+```{r}
+maze %>%
+  group_by(suite, condition, item, word_num) %>%
+  summarise(mean_rt=mean(rt))
+```
+
+# Overall RT, errors
+
+How many words did each participant see?
+
+```{r}
+maze %>% group_by(MD5) %>% tally() #how many words / participant
+by_part_error_rate <- maze %>% group_by(MD5) %>%
+  mutate(corr.num=ifelse(correct=="yes", 1,0)) %>%
+  summarize(fraction_correct=sum(corr.num)/n(), median_rt=median(rt), total_rt=sum(rt)/60000) 
+ggplot(by_part_error_rate, aes(x=fraction_correct, y=median_rt))+
+  geom_point()+
+  coord_cartesian(x=c(0,1), y=c(0,1000))+
+  labs(title="By participant error rates versus median rt")
+ggplot(by_part_error_rate, aes(x=fraction_correct, y=total_rt))+
+  geom_point()+
+  coord_cartesian(x=c(0,1), y=c(0,40))+
+  labs(title="By participant error rates versus summed rt")
+```
+
+# Error rate
+
+Label who's attentive v not for future sorting.
+
+```{r}
+maze_sort <- maze %>% left_join(by_part_error_rate, by="MD5") %>% 
+  mutate(is.attentive=ifelse(fraction_correct>.75,TRUE,F),
+         is.correct=ifelse(correct=="yes",T,F)) %>% 
+  filter(is.attentive)
+```
+
+Of attentive participants, what after mistake data can we trust? As a rough proxy, we'll consider it trustworthy if it had the same RT profile as elsewhere. (This may not be the best proxy for reliability.)
+
+```{r}
+after_mistake <- maze_sort %>% 
+  filter(type=="critical") %>% 
+  filter(rt>100) %>% 
+  filter(rt<5000) %>% 
+  filter(is.correct) %>% 
+  mutate(after_mistake_group=ifelse(after_mistake>10, 11, after_mistake),
+         after_mistake_fct=as_factor(after_mistake_group),
+         word_num_fct=as_factor(word_num)) 
+ggplot(after_mistake, aes(x=after_mistake_fct,y=rt))+geom_boxplot()+coord_cartesian(ylim=c(500,1500))+labs(x="Position relative to last mistake, 0=before mistake, 1=word after mistake", title="Does being directly after a mistake inflate RT?")
+#ggplot(after_mistake, aes(group=word_num_fct,x=word_num_fct, y=rt))+geom_boxplot()+coord_cartesian(ylim=c(0,2000))+labs(title="Position in sentence v RT")
+after_mistake_summ <- after_mistake %>% 
+  group_by(after_mistake_fct) %>% 
+  summarize(mean_rt=mean(rt),
+            median_rt=median(rt))
+  
+after_mistake_summ
+```
+
+It looks like the word after a mistake is higher, but after that it's fine. For the after mistake, the 11 category is really 11+ and contains words from farther along as well. 
+
+  
+
+# Relevant analysis
+
+In order to have reasonable analyses using RT as the dependent measure (untransformed), we want to do light exclusions so that outliers don't have too much pull. Here we exclude <100 ms (which is unreasonably short if you're doing any processing at all) and >5000 ms (which excludes things where someone paused to do somehthing else, but doesn't exclude any of the main curve of data). These two exclusions together exclude 50 data points, which isn't very many. 
+
+Data points are also implicitly excluded if we don't have frequency and surprisal values for them (formula implicitly excluded NAs). Among other things, this excludes the first word of every sentence. 
+
+```{r}
+data_correct <- maze_sort %>% 
+  filter(correct==T) %>% 
+  filter(rt<5000) %>% #eliminates 40 data points
+  filter(rt>100) %>% #eliminates 10 data points
+  select(word_num, word, rt, MD5) %>%
+  ungroup() %>% 
+  mutate(word_num_fct=as_factor(word_num))
+ggplot(data_correct) +geom_density(aes(rt))+labs("Density distribution of remaining RTs")
+  
+```
