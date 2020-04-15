@@ -25,6 +25,12 @@ var completionMessage = "Thank you for your participation.  The results were suc
 var completionErrorMessage = "The transmission of the results failed.  Please contact jgauthie@mit.edu and retry the transmission again by clicking the link.  Your participation code is: " + code.toString();
 
 var items = [
+    // Record participation code.
+    ["code", "DashedSentence", {{s: code.toString(), mode: "speeded acceptability", wordTime: 1}}],
+
+    // Update counter so that no other subject gets the same data.
+    ["setcounter", "__SetCounter__", {{}}],
+
     ["welcome", "Message", {{html:'<table width="100%"><tr><td valign="top" align="right">Department of Brain and Cognitive Sciences<br>Massachusetts Institute of Technology<br>77 Massachusetts Avenue<br>Cambridge, MA 02139-4307, USA</tr></table>\
       <h2>Thank you very much for your participation!</h2><p>This task is part of a MIT scientific research project. Your decision to complete this task is voluntary. There is no way for us to identify you. The only information we will have, in addition to your responses, is the time at which you completed the survey. The results of the research may be presented at scientific meetings or published in scientific journals. Clicking on the link below indicates that you are at least 18 years of age and agree to complete this task voluntarily.'}}],
     ["intro-maze", "Message", {{html: "<p>For this experiment, please place your left index finger on the 'e' key and your right index finger on the 'i' key.</p><p> You will read sentences word by word. On each screen you will see two options: one will be the next word in the sentence, and one will not. Select the word that continues the sentence by pressing 'e' (left-hand) for the word on the left or pressing 'i' (right-hand) for the word on the right.</p><p>Select the best word as quickly as you can, but without making too many errors.</p>"}}],
@@ -61,7 +67,8 @@ var samples_flat = _.flatten(_.concat(_.values(samples)));
 items = items.concat(samples_flat);
 
 //for G-maze
-var shuffleSequence = seq("welcome", "intro-maze", "intro-practice", anyOf("practice"), "end-practice",
+var shuffleSequence = seq("code", "setcounter",
+                          "welcome", "intro-maze", "intro-practice", anyOf("practice"), "end-practice",
                           followEachWith("sep", {items_selector}),
                           "instructions2", anyOf("questionnaire"), "debriefing");
 """
