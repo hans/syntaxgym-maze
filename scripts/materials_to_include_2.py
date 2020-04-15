@@ -19,19 +19,32 @@ var materials_by_tag = {materials_by_tag};
 
 var showProgressBar = false;
 
-var defaults = [
-   // "Maze", {{redo: true}}, //uncomment to try "redo" mode
-];
+var code = Math.floor(Math.random()*100000000);
+var sendingResultsMessage = "The results are now being transferred.  Please wait.";
+var completionMessage = "Thank you for your participation.  The results were successfully transmitted.  Your participation code is: " + code.toString();
+var completionErrorMessage = "The transmission of the results failed.  Please contact jgauthie@mit.edu and retry the transmission again by clicking the link.  Your participation code is: " + code.toString();
+
 var items = [
-	["instructions2", "Message", {{html:'End of sample Maze experiment.'}}],
-	["intro-gram", "Message", {{html: "<p>For this experiment, please place your left index finger on the 'e' key and your right index finger on the 'i' key.</p><p> You will read sentences word by word. On each screen you will see two options: one will be the next word in the sentence, and one will not. Select the word that continues the sentence by pressing 'e' (left-hand) for the word on the left or pressing 'i' (right-hand) for the word on the right.</p><p>Select the best word as quickly as you can, but without making too many errors.</p>"}}],
-	["intro-practice", "Message", {{html: "The following items are for practice." }}],
-	["end-practice", "Message", {{html: "End of practice. The experiment will begin next."}}],
-        [["practice", 104], "Maze", {{s:"The therapist set up a meeting with the upset woman and her husband yesterday.", a:"x-x-x socialism ten sit sum absence wave ran keeps exist dry sum settled remainder.", redo: true}}],
+    ["welcome", "Message", {{html:'<table width="100%"><tr><td valign="top" align="right">Department of Brain and Cognitive Sciences<br>Massachusetts Institute of Technology<br>77 Massachusetts Avenue<br>Cambridge, MA 02139-4307, USA</tr></table>\
+      <h2>Thank you very much for your participation!</h2><p>This task is part of a MIT scientific research project. Your decision to complete this task is voluntary. There is no way for us to identify you. The only information we will have, in addition to your responses, is the time at which you completed the survey. The results of the research may be presented at scientific meetings or published in scientific journals. Clicking on the link below indicates that you are at least 18 years of age and agree to complete this task voluntarily.'}}],
+    ["intro-maze", "Message", {{html: "<p>For this experiment, please place your left index finger on the 'e' key and your right index finger on the 'i' key.</p><p> You will read sentences word by word. On each screen you will see two options: one will be the next word in the sentence, and one will not. Select the word that continues the sentence by pressing 'e' (left-hand) for the word on the left or pressing 'i' (right-hand) for the word on the right.</p><p>Select the best word as quickly as you can, but without making too many errors.</p>"}}],
+    ["instructions2", "Message", {{html:'Now please answer a couple of questions about your background.  In accordance with the ethics guidelines of the Massachusetts Institute of Technology, this information will be stored in anonymous form and it will be impossible to link it to you.'}}],
+    ["debriefing", "Message", {{html:"<p>Thank you.  You will receive the participation code on the next page.</p>\n\n<p>Purpose of this study (feel free to skip): We’re generally interested in how the human brain processes language. The present study is testing out a new method for studying what types of sentence constructions are easier or harder to read. We're also interested in whether it's easy to understand and remember text read with this method. Your data will help us to answer these questions.</p>"}}],
 
-	["sep", "MazeSeparator", {{normalMessage: "Correct! Press any key to continue", errorMessage: "Incorrect! Press any key to continue."}}],
+    ["questionnaire", "Form", {{html:'How old are you? <input type="text" name="age" size="2" maxlength="2" autofocus="true"/>'}}],
+    ["questionnaire", "Question", {{q:"Please select your gender.", as:["Male", "Female","Non-binary", "Decline to state"], hasCorrect: false}}],
+    ["questionnaire", "Form", {{html:'What is your native language? <input type="text" name="native" size="10" maxlength="50" autofocus="true"/>'}}],
+    ["questionnaire", "Form", {{html:'Thank you for completing the experiment. Very briefly, what do you think this study is about?<br/><textarea name="topic" rows="3" cols="50" autofocus="true"></textarea>'}}],
+    ["questionnaire", "Form", {{html:'How was your experience doing this task? What strategies did you use?<br/><textarea name="strategy" rows="3" cols="50" autofocus="true"></textarea>'}}],
+    ["questionnaire", "Form", {{html:'What do you think fair pay for this task would be?<input type="text" name="pay" size="10" maxlength="20" autofocus="true"/>'}}],
 
-	["done", "Message", {{html: "All done!"}}],
+    ["intro-practice", "Message", {{html: "The following items are for practice." }}],
+    ["end-practice", "Message", {{html: "End of practice. The experiment will begin next."}}],
+    [["practice", 104], "Maze", {{s:"The therapist set up a meeting with the upset woman and her husband yesterday.", a:"x-x-x socialism ten sit sum absence wave ran keeps exist dry sum settled remainder.", redo: true}}],
+
+    ["sep", "MazeSeparator", {{normalMessage: "Correct! Press any key to continue", errorMessage: "Incorrect! Press any key to continue."}}],
+
+    ["done", "Message", {{html: "All done!"}}],
 ];
 
 // Sample a collection of experimental items.
@@ -48,11 +61,9 @@ var samples_flat = _.flatten(_.concat(_.values(samples)));
 items = items.concat(samples_flat);
 
 //for G-maze
-var shuffleSequence = seq("intro-gram", "intro-practice",
-                          followEachWith("sep", "practice"),
-                          "end-practice",
-                          followEachWith("sep",{items_selector}),
-                          "instructions2");
+var shuffleSequence = seq("welcome", "intro-maze", "intro-practice", anyOf("practice"), "end-practice",
+                          followEachWith("sep", {items_selector}),
+                          "instructions2", anyOf("questionnaire"), "debriefing");
 """
 
 
