@@ -27,7 +27,7 @@ var items = [
 	["intro-gram", "Message", {{html: "<p>For this experiment, please place your left index finger on the 'e' key and your right index finger on the 'i' key.</p><p> You will read sentences word by word. On each screen you will see two options: one will be the next word in the sentence, and one will not. Select the word that continues the sentence by pressing 'e' (left-hand) for the word on the left or pressing 'i' (right-hand) for the word on the right.</p><p>Select the best word as quickly as you can, but without making too many errors.</p>"}}],
 	["intro-practice", "Message", {{html: "The following items are for practice." }}],
 	["end-practice", "Message", {{html: "End of practice. The experiment will begin next."}}],
-        [["practice", 104], "Maze", {{s:"The therapist set up a meeting with the upset woman and her husband yesterday.", a:"x-x-x socialism ten sit sum absence wave ran keeps exist dry sum settled remainder."}}],
+        [["practice", 104], "Maze", {{s:"The therapist set up a meeting with the upset woman and her husband yesterday.", a:"x-x-x socialism ten sit sum absence wave ran keeps exist dry sum settled remainder.", redo: true}}],
 
 	["sep", "MazeSeparator", {{normalMessage: "Correct! Press any key to continue", errorMessage: "Incorrect! Press any key to continue."}}],
 
@@ -70,6 +70,9 @@ def main(args):
                     line = MISSING_QUOTE_RE.sub(r'"\2\3"\4', line.strip().rstrip(","))
                     line = json.loads(line)
                     line_condition, _ = line[0]
+
+                    # Add "redo" flag
+                    line[2]["redo"] = True
 
                     all_conditions.add(line_condition)
                     materials_by_tag[exp_tag].append(line)
